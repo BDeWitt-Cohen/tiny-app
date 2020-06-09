@@ -36,20 +36,27 @@ app.get("/urls/new", (req, res) => {
 });
 
 app.post("/urls", (req, res) => {
-  // console.log(req.body);
   let shortURL = generateRandomString();
   urlDatabase[shortURL] = req.body.longURL;
-  console.log(urlDatabase); //logs the object with the newly added kvp (key:value pair)
+  console.log(urlDatabase);//logs the object with the newly added kvp (key:value pair)
   res.redirect(`/urls/${shortURL}`);
   return;
-  // res.send("We're working on figuring this out, hold on for like an hour or two");         // Respond with 'Ok' (we will replace this)
+
 });
+
+app.post('/urls/:shortURL/edit', (req, res) => {
+  let shortURL = req.params.shortURL
+  urlDatabase[shortURL] = req.body.longURL
+  res.redirect('/urls')
+})
+
 
 app.post('/urls/:shortURL/delete', (req, res) => {
   console.log(urlDatabase[req.params.shortURL]);
   delete urlDatabase[req.params.shortURL];
   res.redirect('/urls');
 })
+
 
 
 app.get("/urls/:shortURL", (req, res) => {
@@ -63,7 +70,7 @@ app.get("/u/:shortURL", (req, res) => {
   console.log(longURL);
   if (longURL === undefined) {
     res.send("The webpage your originally converted doesn't exist. Maybe try to google it or something...");
-    
+
   }
   res.redirect(longURL);
   return;
