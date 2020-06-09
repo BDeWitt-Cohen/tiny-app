@@ -3,7 +3,7 @@ const app = express();
 const PORT = 3001; // default port 8080
 
 const bodyParser = require("body-parser");
-app.use(bodyParser.urlencoded({extended: true}));
+app.use(bodyParser.urlencoded({ extended: true }));
 //set the view engine to ejs
 app.set('view engine', 'ejs');
 
@@ -37,7 +37,7 @@ app.post("/urls", (req, res) => {
   // console.log(req.body);
 
   urlDatabase[shortUrl] = req.body.longURL;
-   console.log(urlDatabase); //logs the object with the newly added kvp (key:value pair)
+  console.log(urlDatabase); //logs the object with the newly added kvp (key:value pair)
   res.redirect(`/urls/${shortUrl}`);
   return;
   // Log the POST request body to the console
@@ -45,15 +45,19 @@ app.post("/urls", (req, res) => {
 });
 
 
-app.get("/urls/:shortURL", (req, res) => {  
-  let templateVars = { shortURL: req.params.shortURL, longURL: urlDatabase[req.params.shortURL]  };
+app.get("/urls/:shortURL", (req, res) => {
+  let templateVars = { shortURL: req.params.shortURL, longURL: urlDatabase[req.params.shortURL] };
   res.render("urls_show", templateVars);
 });
 
 app.get("/u/:shortURL", (req, res) => {
-console.log("hello");
-  const longURL = urlDatabase[shortUrl]
+
+  const longURL = urlDatabase[shortUrl];
   console.log(longURL);
+  if (longURL === undefined) {
+    res.send("The webpage your originally converted doesn't exist. Maybe try to google it or something...");
+    
+  }
   res.redirect(longURL);
   return;
 });
@@ -72,6 +76,16 @@ console.log(`${PORT} is the 🔥  port`);
 
 
 function generateRandomString() {
-  return Math.random().toString(36).substring(2, 8)
+  return Math.random().toString(36).substring(2, 8);
 }
 
+
+
+// if(longURL === undefined){
+//   console.log("helloaskjaf s");
+//   res.send("The webpage your originally converted doesn't exist. Maybe ttry to google it or something...")
+//   return;
+// } else {
+// res.redirect(longURL)
+
+// return;}
