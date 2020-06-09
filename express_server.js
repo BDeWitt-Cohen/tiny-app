@@ -9,7 +9,9 @@ app.set('view engine', 'ejs');
 
 // use res.render to load up an ejs view file
 
-let shortUrl = generateRandomString();
+function generateRandomString() {
+  return Math.random().toString(36).substring(2, 8);
+}
 
 const urlDatabase = {
   "b2xVn2": "http://www.lighthouselabs.ca",
@@ -35,14 +37,19 @@ app.get("/urls/new", (req, res) => {
 
 app.post("/urls", (req, res) => {
   // console.log(req.body);
-
-  urlDatabase[shortUrl] = req.body.longURL;
+  let shortURL = generateRandomString();
+  urlDatabase[shortURL] = req.body.longURL;
   console.log(urlDatabase); //logs the object with the newly added kvp (key:value pair)
-  res.redirect(`/urls/${shortUrl}`);
+  res.redirect(`/urls/${shortURL}`);
   return;
-  // Log the POST request body to the console
   // res.send("We're working on figuring this out, hold on for like an hour or two");         // Respond with 'Ok' (we will replace this)
 });
+
+app.post('/urls/:shortURL/delete', (req, res) => {
+  console.log(urlDatabase[req.params.shortURL]);
+  delete urlDatabase[req.params.shortURL];
+  res.redirect('/urls');
+})
 
 
 app.get("/urls/:shortURL", (req, res) => {
@@ -52,7 +59,7 @@ app.get("/urls/:shortURL", (req, res) => {
 
 app.get("/u/:shortURL", (req, res) => {
 
-  const longURL = urlDatabase[shortUrl];
+  const longURL = urlDatabase[shortURL];
   console.log(longURL);
   if (longURL === undefined) {
     res.send("The webpage your originally converted doesn't exist. Maybe try to google it or something...");
@@ -75,9 +82,7 @@ app.listen(PORT, () => {
 console.log(`${PORT} is the 🔥  port`);
 
 
-function generateRandomString() {
-  return Math.random().toString(36).substring(2, 8);
-}
+
 
 
 
