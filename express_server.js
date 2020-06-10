@@ -85,13 +85,40 @@ app.post('/logout', (req, res) => {
   res.redirect("/urls")
 })
 
-//Still in progress
+
+
+
+//Still in progress, renders the registration page and passes templateVars to user_registration
 app.get('/register', (req, res) => {
   let templateVars = {
     urls: urlDatabase,
     username: req.cookies["username"]
   };
   res.render('user_registration', templateVars)
+})
+
+
+
+
+
+app.post('/register', (req, res) => {
+//needs to add new user to user object
+//will need to set a cookie with the user_id
+//will then redirect to /urls, that will be the last step
+//need to make sure that the user data is being passed in properly
+//password will equal req.body.password and email with be req.body.email
+let id = generateRandomString()
+let email = req.body.email
+let password = req.body.password
+ users[id] = {
+    id, 
+    email, 
+    password
+  }
+  console.log(users);
+  res.cookie('user_ID', id)
+
+  res.redirect('/urls')
 })
 
 
