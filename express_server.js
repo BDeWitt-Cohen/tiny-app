@@ -3,15 +3,31 @@ const app = express(); //express package for the server
 const PORT = 3001; // default port 8080 doesn't seem to work on my setup
 const cookieParser = require('cookie-parser') //cookie parser package
 const bodyParser = require("body-parser"); //body parser package
+const morgan = require('morgan')
 
 app.use(cookieParser())
 app.use(bodyParser.urlencoded({ extended: true }));
 app.set('view engine', 'ejs'); //setting viewing engine to read ejs
+app.use(morgan('tiny'));
 
 //Function to generate 6 character alpha-numeric string
 function generateRandomString() {
   return Math.random().toString(36).substring(2, 8);
 }
+
+//returns longurls
+const urlsForUser = function(urlDatabase, ID) {
+  const filteredData = {};
+  for (const url in urlDatabase) {
+
+    if (ID === urlDatabase[url].userID) {
+      filteredData[url] = urlDatabase[url]
+
+    }
+  }
+  return filteredData;
+}
+
 
 //URL database - looping through this on the index page
 const urlDatabase = {
@@ -46,11 +62,16 @@ app.get("/urls.json", (req, res) => {
 
 //Renders the index page and moves templateVars over to index page
 app.get("/urls", (req, res) => {
-  // {longURL: req.body.longURL, userID: req.cookies["user_id"]};
+  // console.log("urldatabse in urls",urlDatabase); // all urls
+  // console.log("heres all users in urls/", users); // all users
+  const justID = req.cookies["user_id"];
   if (req.cookies["user_id"]) {
+
+    const urlList = urlsForUser(urlDatabase, justID)
     let templateVars = {
-      urls: urlDatabase,
-      user: users[req.cookies["user_id"]]
+      // urls: urlDatabase,
+      user: users[req.cookies["user_id"]],
+      urls: urlList
     };
     res.render("urls_index", templateVars);
     return;
@@ -60,8 +81,8 @@ app.get("/urls", (req, res) => {
 
 //Sending templateVars to urls_new
 app.get("/urls/new", (req, res) => {
-let longURL = req.params.longURL
-console.log("this is the long url", longURL);
+  let longURL = req.params.longURL
+  console.log("this is the long url", longURL);
   if (!req.cookies["user_id"]) {
     res.redirect('/login')
     return
@@ -107,7 +128,7 @@ app.get("/u/:shortURL", (req, res) => {
 
 
 app.get("/urls/:shortURL", (req, res) => {
-  console.log("shorturl in urls/shorturl",req.params.shortURL);
+  console.log("shorturl in urls/shorturl", req.params.shortURL);
   console.log("longURL in ursl/shortURL", urlDatabase[req.params.shortURL]);
   let templateVars = {
     shortURL: req.params.shortURL,
@@ -129,7 +150,7 @@ app.post("/urls", (req, res) => {
   // "b2xVn2": { longURL: "http://www.lighthouselabs.ca", userID: "batman" }
   let shortURL = generateRandomString();
 
-  let temp = {longURL: req.body.longURL, userID: req.cookies["user_id"]};
+  let temp = { longURL: req.body.longURL, userID: req.cookies["user_id"] };
 
   //urlDatabase[shortURL].longURL = req.body.longURL;
   urlDatabase[shortURL] = temp;
@@ -195,16 +216,45 @@ app.post('/register', (req, res) => {
 
 //Setting longURL to the proper shortURL then back to /urls
 app.post('/urls/:shortURL/edit', (req, res) => {
+  // first retirieve this particular shortURL then check if
+  //now compare current user with userID tags in full object 
+
+
   let shortURL = req.params.shortURL
-  urlDatabase[shortURL] = req.body.longURL
-  res.redirect('/urls')
+  const fullObject = urlDatabase[shortURL]
+  if (!fullObject) {
+    res.status(301)
+    res.send("this url doesn't exist, fix this later")
+    return
+  }
+  if (req.cookies["user_id"] === fullObject.userID) {
+
+    urlDatabase[shortURL] = req.body.longURL
+    res.redirect('/urls')
+    return
+  }
+  res.send("you don't have access to this url")
+
 })
 
 //Removing a short/long URL from the database then back to /urls
 app.post('/urls/:shortURL/delete', (req, res) => {
-  console.log(urlDatabase[req.params.shortURL]);
-  delete urlDatabase[req.params.shortURL];
-  res.redirect('/urls');
+
+  let shortURL = req.params.shortURL
+  const fullObject = urlDatabase[shortURL]
+  if (!fullObject) {
+    res.status(301)
+    res.send("this url doesn't exist, fix this later")
+    return
+  }
+  if (req.cookies["user_id"] === fullObject.userID) {
+
+    delete urlDatabase[req.params.shortURL]
+    res.redirect('/urls')
+    return
+  }
+  res.send("you don't have access to this url")
+
 })
 
 
