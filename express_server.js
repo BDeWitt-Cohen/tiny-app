@@ -5,17 +5,31 @@ const cookieParser = require('cookie-parser') //cookie parser package
 const bodyParser = require("body-parser"); //body parser package
 const morgan = require('morgan') //logger middleware
 const bcrypt = require('bcrypt'); //password hasher
-
+const cookieSession = require('cookie-session')
 
 // const password = "purple-monkey-dinosaur"; // found in the req.params object
 // const hashedPassword = bcrypt.hashSync(password, 10);
 
+//how does cookie encryption work?
+// req.cookies["user_id"] === req.session.user_id // this must be checking/reading the cookie
+// res.cookie('user_id', userId) is setting cookies and needs to be replaced with req.session.user_id = "user_id";
+// and clearing a cookie is res.clearCookie("user_id") and needs to be replaced with req.session.user_id = null;
 
 
 app.use(cookieParser())
 app.use(bodyParser.urlencoded({ extended: true }));
 app.set('view engine', 'ejs'); //setting viewing engine to read ejs
 app.use(morgan('tiny'));
+app.use(cookieSession({
+  name: 'session',
+  keys: [
+    'salfkvlsdkvnslvnsvlknsdv',
+    'sknalcknfcslkkcvlknmdsclvkmsdvlksdvlk'
+  ],
+
+  // Cookie Options
+  maxAge: 24 * 60 * 60 * 1000 // 24 hours
+}))
 
 //Function to generate 6 character alpha-numeric string
 function generateRandomString() {
@@ -69,14 +83,10 @@ app.get("/urls.json", (req, res) => {
 
 //Renders the index page and moves templateVars over to index page
 app.get("/urls", (req, res) => {
-  // console.log("urldatabse in urls",urlDatabase); // all urls
-  // console.log("heres all users in urls/", users); // all users
   const justID = req.cookies["user_id"];
   if (req.cookies["user_id"]) {
-
     const urlList = urlsForUser(urlDatabase, justID)
     let templateVars = {
-      // urls: urlDatabase,
       user: users[req.cookies["user_id"]],
       urls: urlList
     };
@@ -187,7 +197,7 @@ app.post('/logout', (req, res) => {
   res.redirect("/urls")
 })
 
-//Register new user, set and set cookie, if user exists send an error back
+//Register new user, and set cookie, if user exists send an error back
 app.post('/register', (req, res) => {
   const id = generateRandomString()
   const email = req.body.email
@@ -213,6 +223,7 @@ app.post('/register', (req, res) => {
   }
 
   users[id] = newUser
+
   res.cookie('user_id', id)
   return res.redirect('/urls')
 
