@@ -59,6 +59,7 @@ app.get("/urls", (req, res) => {
 
 //Sending templateVars to urls_new
 app.get("/urls/new", (req, res) => {
+  console.log(users);
   let templateVars = {
 
     user: users[req.cookies["user_id"]]
