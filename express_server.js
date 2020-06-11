@@ -3,7 +3,14 @@ const app = express(); //express package for the server
 const PORT = 3001; // default port 8080 doesn't seem to work on my setup
 const cookieParser = require('cookie-parser') //cookie parser package
 const bodyParser = require("body-parser"); //body parser package
-const morgan = require('morgan')
+const morgan = require('morgan') //logger middleware
+const bcrypt = require('bcrypt'); //password hasher
+
+
+// const password = "purple-monkey-dinosaur"; // found in the req.params object
+// const hashedPassword = bcrypt.hashSync(password, 10);
+
+
 
 app.use(cookieParser())
 app.use(bodyParser.urlencoded({ extended: true }));
@@ -91,8 +98,6 @@ app.get("/urls/new", (req, res) => {
     user: users[req.cookies["user_id"]],
     longURL
   }
-  console.log("whats this", req.params.longURL);
-  // console.log(urlDatabase);
   res.render("urls_new", templateVars);
 });
 
@@ -128,8 +133,6 @@ app.get("/u/:shortURL", (req, res) => {
 
 
 app.get("/urls/:shortURL", (req, res) => {
-  console.log("shorturl in urls/shorturl", req.params.shortURL);
-  console.log("longURL in ursl/shortURL", urlDatabase[req.params.shortURL]);
   let templateVars = {
     shortURL: req.params.shortURL,
     longURL: urlDatabase[req.params.shortURL].longURL,
@@ -138,9 +141,9 @@ app.get("/urls/:shortURL", (req, res) => {
   res.render("urls_show", templateVars);
 });
 
-//Just displays Hello World on the /hello page. Can probably get rid of this at some point.
+//Redirects to registration page
 app.get("/hello", (req, res) => {
-  res.send("<html><body>Hello <b>World</b></body></html>\n");
+  res.redirect("/register");
 });
 
 
@@ -164,18 +167,18 @@ app.post('/login', (req, res) => {
   const password = req.body.password
 
   for (const userId in users) {
-    // console.log(users[userId]);
-    // console.log(email);
-    if (users[userId].email === email && users[userId].password === password) {
+    if (users[userId].email === email) {
 
-      res.cookie('user_id', userId)
-      res.redirect('/urls')
-      return
+   const result = bcrypt.compareSync(password, users[userId].hashedPassword) 
+        if (result) {
+          res.cookie('user_id', userId)
+          res.redirect('/urls')
+          return
+        } 
     }
   }
   res.status(403)
   res.send("there is an error with your sign-in credentials")
-
 })
 
 //Clearing cookies and redirecting back to /urls
@@ -189,10 +192,11 @@ app.post('/register', (req, res) => {
   const id = generateRandomString()
   const email = req.body.email
   const password = req.body.password
+  const hashedPassword = bcrypt.hashSync(password, 10);
   const newUser = {
     id,
     email,
-    password
+    hashedPassword
   }
 
   if (!email || !password) {
@@ -203,11 +207,11 @@ app.post('/register', (req, res) => {
   for (const userId in users) {
     console.log(users[userId]);
     if (users[userId].email === email) {
-
       res.status(400)
-      return res.send("there is a problem")
+      return res.send("there is a problem, that email already exists")
     }
   }
+
   users[id] = newUser
   res.cookie('user_id', id)
   return res.redirect('/urls')
