@@ -60,15 +60,18 @@ app.get("/urls", (req, res) => {
 
 //Sending templateVars to urls_new
 app.get("/urls/new", (req, res) => {
-
+let longURL = req.params.longURL
+console.log("this is the long url", longURL);
   if (!req.cookies["user_id"]) {
     res.redirect('/login')
     return
   }
   let templateVars = {
-
-    user: users[req.cookies["user_id"]]
+    user: users[req.cookies["user_id"]],
+    longURL
   }
+  console.log("whats this", req.params.longURL);
+  // console.log(urlDatabase);
   res.render("urls_new", templateVars);
 });
 
@@ -91,8 +94,9 @@ app.get('/login', (req, res) => {
 
 //Error code if the webpage isn't valid, otherwise redirects to the longURL
 app.get("/u/:shortURL", (req, res) => {
-console.log(urlDatabase);
-  const longURL = urlDatabase[shortURL].longURL;
+
+  const longURL = urlDatabase[req.params.shortURL].longURL;
+  console.log(longURL);
   if (longURL === undefined) {
     res.send("The webpage your originally converted doesn't exist. Maybe try to google it or something...");
 
@@ -103,9 +107,11 @@ console.log(urlDatabase);
 
 
 app.get("/urls/:shortURL", (req, res) => {
+  console.log("shorturl in urls/shorturl",req.params.shortURL);
+  console.log("longURL in ursl/shortURL", urlDatabase[req.params.shortURL]);
   let templateVars = {
     shortURL: req.params.shortURL,
-    longURL: urlDatabase[req.params.shortURL],
+    longURL: urlDatabase[req.params.shortURL].longURL,
     user: users[req.cookies["user_id"]]
   };
   res.render("urls_show", templateVars);
@@ -121,7 +127,6 @@ app.get("/hello", (req, res) => {
 //Updates the URL database with new shortened URL
 app.post("/urls", (req, res) => {
   // "b2xVn2": { longURL: "http://www.lighthouselabs.ca", userID: "batman" }
-  console.log(req.body);
   let shortURL = generateRandomString();
 
   let temp = {longURL: req.body.longURL, userID: req.cookies["user_id"]};
