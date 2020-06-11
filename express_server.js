@@ -38,28 +38,79 @@ app.get("/", (req, res) => {
   res.send("Hello!");
 });
 
-//Displays all of the URLs in the database
+//Displays all of the URLs in the database as JSON - likely not needed anymore
 app.get("/urls.json", (req, res) => {
-  
+
   res.json(urlDatabase);
 });
 
 //Renders the index page and moves templateVars over to index page
 app.get("/urls", (req, res) => {
-  let templateVars = {
-    urls: urlDatabase,
-    username: req.cookies["username"]
-  };
-  res.render("urls_index", templateVars);
+  if (req.cookies["user_id"]) {
+    let templateVars = {
+      urls: urlDatabase,
+      user: users[req.cookies["user_id"]]
+    };
+    res.render("urls_index", templateVars);
+    return;
+  }
+  res.redirect("/login")
 });
 
 //Sending templateVars to urls_new
 app.get("/urls/new", (req, res) => {
   let templateVars = {
-    username: req.cookies["username"]
+
+    user: users[req.cookies["user_id"]]
   }
   res.render("urls_new", templateVars);
 });
+
+//Still in progress, renders the registration page and passes templateVars to user_registration
+app.get('/register', (req, res) => {
+  let templateVars = {
+    urls: urlDatabase,
+    user: ""
+  };
+  res.render('user_registration', templateVars)
+})
+
+app.get('/login', (req, res) => {
+  let templateVars = {
+    urls: urlDatabase,
+    user: ""
+  };
+  res.render('user_login', templateVars)
+})
+//Error code if the webpage isn't valid, otherwise redirects to the longURL
+app.get("/u/:shortURL", (req, res) => {
+
+  const longURL = urlDatabase[shortURL];
+  console.log(longURL);
+  if (longURL === undefined) {
+    res.send("The webpage your originally converted doesn't exist. Maybe try to google it or something...");
+
+  }
+  res.redirect(longURL);
+  return;
+});
+
+
+app.get("/urls/:shortURL", (req, res) => {
+  let templateVars = {
+    shortURL: req.params.shortURL,
+    longURL: urlDatabase[req.params.shortURL],
+    user: users[req.cookies["user_id"]]
+  };
+  res.render("urls_show", templateVars);
+});
+
+//Just displays Hello World on the /hello page. Can probably get rid of this at some point.
+app.get("/hello", (req, res) => {
+  res.send("<html><body>Hello <b>World</b></body></html>\n");
+});
+
+
 
 //Updates the URL database with new shortened URL
 app.post("/urls", (req, res) => {
@@ -71,56 +122,59 @@ app.post("/urls", (req, res) => {
 
 //Setting cookies name and passing it to /urls then redirecting to /urls
 app.post('/login', (req, res) => {
-  res.cookie('username', req.body.username)
-  let templateVars = {
-    username: req.cookies["username"],
-    urls: urlDatabase
-  };
-  res.redirect('/urls')
+  const email = req.body.email
+  const password = req.body.password
+
+  for (const userId in users) {
+    console.log(users[userId]);
+    console.log(email); 
+    if (users[userId].email === email && users[userId].password === password) {
+
+      res.cookie('user_id', userId)
+      res.redirect('/urls')
+      return
+    }
+  }
+  res.status(403)
+  res.send("there is an error with your sign-in credentials")
+  
 })
 
 //Clearing cookies and redirecting back to /urls
 app.post('/logout', (req, res) => {
-  res.clearCookie("username")
+  res.clearCookie("user_id")
   res.redirect("/urls")
 })
 
 
-
-
-//Still in progress, renders the registration page and passes templateVars to user_registration
-app.get('/register', (req, res) => {
-  let templateVars = {
-    urls: urlDatabase,
-    username: req.cookies["username"]
-  };
-  res.render('user_registration', templateVars)
-})
-
-
-
-
-
 app.post('/register', (req, res) => {
-//needs to add new user to user object
-//will need to set a cookie with the user_id
-//will then redirect to /urls, that will be the last step
-//need to make sure that the user data is being passed in properly
-//password will equal req.body.password and email with be req.body.email
-let id = generateRandomString()
-let email = req.body.email
-let password = req.body.password
- users[id] = {
-    id, 
-    email, 
+  const id = generateRandomString()
+  const email = req.body.email
+  const password = req.body.password
+  const newUser = {
+    id,
+    email,
     password
   }
-  console.log(users);
-  res.cookie('user_ID', id)
 
-  res.redirect('/urls')
+  if (!email || !password) {
+    res.status(400)
+    res.send("this thing dun did broke")
+  }
+
+  for (const userId in users) {
+    console.log(users[userId]);
+    if (users[userId].email === email) {
+
+      res.status(400)
+      return res.send("there is a problem")
+    }
+  }
+  users[id] = newUser
+  res.cookie('user_id', id)
+  return res.redirect('/urls')
+
 })
-
 
 //Setting longURL to the proper shortURL then back to /urls
 app.post('/urls/:shortURL/edit', (req, res) => {
@@ -137,35 +191,22 @@ app.post('/urls/:shortURL/delete', (req, res) => {
 })
 
 
-app.get("/urls/:shortURL", (req, res) => {
-  let templateVars = {
-    shortURL: req.params.shortURL,
-    longURL: urlDatabase[req.params.shortURL],
-    username: req.cookies["username"]
-  };
-  res.render("urls_show", templateVars);
-});
-
-//Error code if the webpage isn't valid, otherwise redirects to the longURL
-app.get("/u/:shortURL", (req, res) => {
-
-  const longURL = urlDatabase[shortURL];
-  console.log(longURL);
-  if (longURL === undefined) {
-    res.send("The webpage your originally converted doesn't exist. Maybe try to google it or something...");
-
-  }
-  res.redirect(longURL);
-  return;
-});
-
-//Just displays Hello World on the /hello page. Can probably get rid of this at some point.
-app.get("/hello", (req, res) => {
-  res.send("<html><body>Hello <b>World</b></body></html>\n");
-});
 
 
 //Just a listener to ensure server is running. A bit redundant with nodemon installed.
 app.listen(PORT, () => {
   console.log(`Yo, your port is "${PORT}" and it's 🔥🔥🔥!`);
 });
+
+
+
+// const foundUser = function() {
+//   let user = req.cookies["user_id"]
+//   let foundUser;
+//   for (const userId in users) {
+//     if (user.email === email) {
+//       return true
+//       foundUser = users[userId];
+//     }
+//   }
+// }
