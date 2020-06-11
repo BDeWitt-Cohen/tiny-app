@@ -15,8 +15,8 @@ function generateRandomString() {
 
 //URL database - looping through this on the index page
 const urlDatabase = {
-  "b2xVn2": "http://www.lighthouselabs.ca",
-  "9sm5xK": "http://www.google.com"
+  "b2xVn2": { longURL: "http://www.lighthouselabs.ca", userID: "batman" },
+  "sdmkfj": { longURL: "http://www.google.com", userID: "batman" }
 };
 
 //Users and details for each. Likely need to loop through at some point
@@ -46,6 +46,7 @@ app.get("/urls.json", (req, res) => {
 
 //Renders the index page and moves templateVars over to index page
 app.get("/urls", (req, res) => {
+  // {longURL: req.body.longURL, userID: req.cookies["user_id"]};
   if (req.cookies["user_id"]) {
     let templateVars = {
       urls: urlDatabase,
@@ -59,7 +60,11 @@ app.get("/urls", (req, res) => {
 
 //Sending templateVars to urls_new
 app.get("/urls/new", (req, res) => {
-  console.log(users);
+
+  if (!req.cookies["user_id"]) {
+    res.redirect('/login')
+    return
+  }
   let templateVars = {
 
     user: users[req.cookies["user_id"]]
@@ -83,11 +88,11 @@ app.get('/login', (req, res) => {
   };
   res.render('user_login', templateVars)
 })
+
 //Error code if the webpage isn't valid, otherwise redirects to the longURL
 app.get("/u/:shortURL", (req, res) => {
-
-  const longURL = urlDatabase[shortURL];
-  console.log(longURL);
+console.log(urlDatabase);
+  const longURL = urlDatabase[shortURL].longURL;
   if (longURL === undefined) {
     res.send("The webpage your originally converted doesn't exist. Maybe try to google it or something...");
 
@@ -115,8 +120,14 @@ app.get("/hello", (req, res) => {
 
 //Updates the URL database with new shortened URL
 app.post("/urls", (req, res) => {
+  // "b2xVn2": { longURL: "http://www.lighthouselabs.ca", userID: "batman" }
+  console.log(req.body);
   let shortURL = generateRandomString();
-  urlDatabase[shortURL] = req.body.longURL;
+
+  let temp = {longURL: req.body.longURL, userID: req.cookies["user_id"]};
+
+  //urlDatabase[shortURL].longURL = req.body.longURL;
+  urlDatabase[shortURL] = temp;
   res.redirect(`/urls/${shortURL}`);
   return;
 });
@@ -127,8 +138,8 @@ app.post('/login', (req, res) => {
   const password = req.body.password
 
   for (const userId in users) {
-    console.log(users[userId]);
-    console.log(email); 
+    // console.log(users[userId]);
+    // console.log(email);
     if (users[userId].email === email && users[userId].password === password) {
 
       res.cookie('user_id', userId)
@@ -138,7 +149,7 @@ app.post('/login', (req, res) => {
   }
   res.status(403)
   res.send("there is an error with your sign-in credentials")
-  
+
 })
 
 //Clearing cookies and redirecting back to /urls
@@ -147,7 +158,7 @@ app.post('/logout', (req, res) => {
   res.redirect("/urls")
 })
 
-
+//Register new user, set and set cookie, if user exists send an error back
 app.post('/register', (req, res) => {
   const id = generateRandomString()
   const email = req.body.email
