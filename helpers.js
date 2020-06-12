@@ -1,6 +1,7 @@
 //returns longurls
 const urlsForUser = function(urlDatabase, ID) {
   const filteredData = {};
+console.log("stuff", urlDatabase, ID);
   for (const url in urlDatabase) {
 
     if (ID === urlDatabase[url].userID) {
@@ -8,6 +9,7 @@ const urlsForUser = function(urlDatabase, ID) {
 
     }
   }
+
   return filteredData;
 }
 

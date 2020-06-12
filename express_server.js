@@ -47,15 +47,13 @@ const users = {
   }
 };
 
+
+//**********GET requests **********//
+
+
 //Root path, redirects to register page
 app.get("/", (req, res) => {
   res.redirect('/register');
-});
-
-//Displays all of the URLs in the database as JSON - 
-app.get("/urls.json", (req, res) => {
-
-  res.json(urlDatabase);
 });
 
 //Renders the index page and moves templateVars over to index page
@@ -64,16 +62,19 @@ app.get("/urls", (req, res) => {
 
   if (req.session.userid) {
     const urlList = urlsForUser(urlDatabase, justID);
+
     let templateVars = {
       user: users[req.session.userid],
-      urls: urlList
+      urls: urlList,
+      // urlDatabase
     };
-
+console.log("this is templafl", templateVars);
     res.render("urls_index", templateVars);
     return;
   }
 
   res.redirect("/login");
+  return
 });
 
 //Sending templateVars to urls_new
@@ -94,7 +95,7 @@ app.get("/urls/new", (req, res) => {
   res.render("urls_new", templateVars);
 });
 
-//Still in progress, renders the registration page and passes templateVars to user_registration
+//Renders the registration page and passes templateVars to user_registration
 app.get('/register', (req, res) => {
   if (req.session.userid) {
     res.redirect('/urls');
@@ -107,8 +108,8 @@ app.get('/register', (req, res) => {
   res.render('user_registration', templateVars);
 });
 
+//Renders login page, if already logged in redirects to /urls
 app.get('/login', (req, res) => {
-  
   if (req.session.userid) {
     res.redirect('/urls');
   }
@@ -117,10 +118,12 @@ app.get('/login', (req, res) => {
     urls: urlDatabase,
     user: ""
   };
+
   res.render('user_login', templateVars);
+  return
 });
 
-//Error code if the webpage isn't valid, otherwise redirects to the longURL
+//Error if longURL isn't valid or shortURL doesn't exist otherwise takes them to their longURL
 app.get("/u/:shortURL", (req, res) => {
   let newShort = req.params.shortURL;
 
@@ -140,29 +143,27 @@ app.get("/u/:shortURL", (req, res) => {
   return;
 });
 
-
+//Goes to the show page where they can edit or use their link
 app.get("/urls/:shortURL", (req, res) => {
   let templateVars = {
     shortURL: req.params.shortURL,
     longURL: urlDatabase[req.params.shortURL].longURL,
     user: users[req.session.userid]
   };
+
   res.render("urls_show", templateVars);
 });
 
-//Redirects to registration page
-app.get("/hello", (req, res) => {
-  res.redirect("/register");
-});
 
+//**********POST requests **********//
 
 
 //Updates the URL database with new shortened URL
 app.post("/urls", (req, res) => {
-  // "b2xVn2": { longURL: "http://www.lighthouselabs.ca", userID: "batman" }
   let shortURL = generateRandomString();
   let temp = { longURL: req.body.longURL, userID: req.session.userid };
   urlDatabase[shortURL] = temp;
+
   res.redirect(`/urls/${shortURL}`);
   return;
 });
@@ -171,9 +172,12 @@ app.post("/urls", (req, res) => {
 app.post('/login', (req, res) => {
   const email = req.body.email;
   const password = req.body.password;
+
   for (const userId in users) {
+
     if (users[userId].email === email) {
       const result = bcrypt.compareSync(password, users[userId].hashedPassword);
+
       if (result) {
         req.session.userid = "userid";
         res.redirect('/urls');
@@ -181,6 +185,7 @@ app.post('/login', (req, res) => {
       }
     }
   }
+
   res.status(403);
   res.send("there is an error with your sign-in credentials");
 });
@@ -202,16 +207,20 @@ app.post('/register', (req, res) => {
     email,
     hashedPassword
   };
+
   if (!email || !password) {
     res.status(400);
     res.send("this thing dun did broke");
   }
+
   for (const userId in users) {
+
     if (users[userId].email === email) {
       res.status(400);
       return res.send("there is a problem, that email already exists");
     }
   }
+
   users[id] = newUser;
   req.session.userid = id;
   return res.redirect('/urls');
@@ -219,23 +228,25 @@ app.post('/register', (req, res) => {
 
 //Setting longURL to the proper shortURL then back to /urls
 app.post('/urls/:shortURL/edit', (req, res) => {
+  // console.log(urlDatabase);
   let shortURL = req.params.shortURL;
   const fullObject = urlDatabase[shortURL];
-
+// console.log(fullObject);
   if (!fullObject) {
-    res.status(301);
-    res.send("this url doesn't exist, fix this later");
+    res.status(301).send("this url doesn't exist, fix this later");
     return;
   }
 
   if (req.session.userid === fullObject.userID) {
-    urlDatabase[shortURL] = req.body.longURL;
+    let longURL = req.body.longURL
+    let userID = fullObject.userID
+    urlDatabase[shortURL] = { longURL, userID };
+    console.log("post edit", urlDatabase);
     res.redirect('/urls');
     return;
   }
 
   res.send("you don't have access to this url");
-
 });
 
 //Removing a short/long URL from the database then back to /urls
@@ -254,8 +265,8 @@ app.post('/urls/:shortURL/delete', (req, res) => {
     res.redirect('/urls');
     return;
   }
-  res.send("you don't have access to this url");
 
+  res.send("you don't have access to this url");
 });
 
 
@@ -263,5 +274,5 @@ app.post('/urls/:shortURL/delete', (req, res) => {
 
 //Just a listener to ensure server is running. A bit redundant with nodemon installed.
 app.listen(PORT, () => {
-  console.log(`Yo, your port is "${PORT}" and it's 🔥🔥🔥!`);
+  console.log(`Your port is "${PORT}" and it's 🔥🔥🔥!`);
 });
