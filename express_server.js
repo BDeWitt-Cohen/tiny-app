@@ -1,25 +1,17 @@
 const express = require("express");
 const app = express(); //express package for the server
 const PORT = 3001; // default port 8080 doesn't seem to work on my setup
-const cookieParser = require('cookie-parser') //cookie parser package
 const bodyParser = require("body-parser"); //body parser package
-const morgan = require('morgan') //logger middleware
+const morgan = require('morgan'); //logger middleware
 const bcrypt = require('bcrypt'); //password hasher
-const cookieSession = require('cookie-session')
-
-// const password = "purple-monkey-dinosaur"; // found in the req.params object
-// const hashedPassword = bcrypt.hashSync(password, 10);
-
-//how does cookie encryption work?
-// req.cookies["user_id"] === req.session.user_id // this must be checking/reading the cookie
-// res.cookie('user_id', userId) is setting cookies and needs to be replaced with req.session.user_id = "user_id";
-// and clearing a cookie is res.clearCookie("user_id") and needs to be replaced with req.session.user_id = null;
+const cookieSession = require('cookie-session'); //cookie-encryption
+const { urlsForUser, generateRandomString } = require('./helpers'); //bringing in helper functions
 
 
-app.use(cookieParser())
-app.use(bodyParser.urlencoded({ extended: true }));
+
+app.use(bodyParser.urlencoded({ extended: true })); //setting bodyParser params
 app.set('view engine', 'ejs'); //setting viewing engine to read ejs
-app.use(morgan('tiny'));
+app.use(morgan('tiny')); //setting morgan logger params
 app.use(cookieSession({
   name: 'session',
   keys: [
@@ -27,55 +19,40 @@ app.use(cookieSession({
     'sknalcknfcslkkcvlknmdsclvkmsdvlksdvlk'
   ],
 
-  // Cookie Options
   maxAge: 24 * 60 * 60 * 1000 // 24 hours
-}))
-
-//Function to generate 6 character alpha-numeric string
-function generateRandomString() {
-  return Math.random().toString(36).substring(2, 8);
-}
-
-//returns longurls
-const urlsForUser = function(urlDatabase, ID) {
-  const filteredData = {};
-  for (const url in urlDatabase) {
-
-    if (ID === urlDatabase[url].userID) {
-      filteredData[url] = urlDatabase[url]
-
-    }
-  }
-  return filteredData;
-}
+})); //setting cookie-session params
 
 
-//URL database - looping through this on the index page
+
+
+
+//Hardcoded URL database - looping through this on the index page
 const urlDatabase = {
   "b2xVn2": { longURL: "http://www.lighthouselabs.ca", userID: "batman" },
   "sdmkfj": { longURL: "http://www.google.com", userID: "batman" }
 };
 
-//Users and details for each. Likely need to loop through at some point
+//Users and details for each. These passwords are not hashed and will therefore fail
 const users = {
   "tthomas": {
     id: "tthomas",
     email: "tthomas@me.com",
     password: "wouldyoukindly"
   },
+
   "batman": {
     id: "batman",
     email: "bat@man.com",
     password: "gotham"
   }
-}
+};
 
-//Root path, just displays hello, will want to change this at some point, maybe a redirect to /URLs
+//Root path, redirects to register page
 app.get("/", (req, res) => {
-  res.send("Hello!");
+  res.redirect('/register');
 });
 
-//Displays all of the URLs in the database as JSON - likely not needed anymore
+//Displays all of the URLs in the database as JSON - 
 app.get("/urls.json", (req, res) => {
 
   res.json(urlDatabase);
@@ -83,60 +60,82 @@ app.get("/urls.json", (req, res) => {
 
 //Renders the index page and moves templateVars over to index page
 app.get("/urls", (req, res) => {
-  const justID = req.cookies["user_id"];
-  if (req.cookies["user_id"]) {
-    const urlList = urlsForUser(urlDatabase, justID)
+  const justID = req.session.userid;
+
+  if (req.session.userid) {
+    const urlList = urlsForUser(urlDatabase, justID);
     let templateVars = {
-      user: users[req.cookies["user_id"]],
+      user: users[req.session.userid],
       urls: urlList
     };
+
     res.render("urls_index", templateVars);
     return;
   }
-  res.redirect("/login")
+
+  res.redirect("/login");
 });
 
 //Sending templateVars to urls_new
 app.get("/urls/new", (req, res) => {
-  let longURL = req.params.longURL
-  console.log("this is the long url", longURL);
-  if (!req.cookies["user_id"]) {
-    res.redirect('/login')
-    return
+  let longURL = req.params.longURL;
+
+  if (!req.session.userid) {
+    res.redirect('/login');
+    return;
   }
+
   let templateVars = {
-    user: users[req.cookies["user_id"]],
-    longURL
-  }
+    user: users[req.session.userid],
+    longURL,
+    urlDatabase
+  };
+
   res.render("urls_new", templateVars);
 });
 
 //Still in progress, renders the registration page and passes templateVars to user_registration
 app.get('/register', (req, res) => {
+  if (req.session.userid) {
+    res.redirect('/urls');
+  }
+  
   let templateVars = {
     urls: urlDatabase,
     user: ""
   };
-  res.render('user_registration', templateVars)
-})
+  res.render('user_registration', templateVars);
+});
 
 app.get('/login', (req, res) => {
+  
+  if (req.session.userid) {
+    res.redirect('/urls');
+  }
+  
   let templateVars = {
     urls: urlDatabase,
     user: ""
   };
-  res.render('user_login', templateVars)
-})
+  res.render('user_login', templateVars);
+});
 
 //Error code if the webpage isn't valid, otherwise redirects to the longURL
 app.get("/u/:shortURL", (req, res) => {
+  let newShort = req.params.shortURL;
+
+  for (const urls in urlDatabase) {
+    if (urls !== newShort) {
+      res.send('Sorry, that shortURL doesn\'t exits!');
+    }
+  }
 
   const longURL = urlDatabase[req.params.shortURL].longURL;
-  console.log(longURL);
   if (longURL === undefined) {
     res.send("The webpage your originally converted doesn't exist. Maybe try to google it or something...");
 
   }
+
   res.redirect(longURL);
   return;
 });
@@ -146,7 +145,7 @@ app.get("/urls/:shortURL", (req, res) => {
   let templateVars = {
     shortURL: req.params.shortURL,
     longURL: urlDatabase[req.params.shortURL].longURL,
-    user: users[req.cookies["user_id"]]
+    user: users[req.session.userid]
   };
   res.render("urls_show", templateVars);
 });
@@ -162,10 +161,7 @@ app.get("/hello", (req, res) => {
 app.post("/urls", (req, res) => {
   // "b2xVn2": { longURL: "http://www.lighthouselabs.ca", userID: "batman" }
   let shortURL = generateRandomString();
-
-  let temp = { longURL: req.body.longURL, userID: req.cookies["user_id"] };
-
-  //urlDatabase[shortURL].longURL = req.body.longURL;
+  let temp = { longURL: req.body.longURL, userID: req.session.userid };
   urlDatabase[shortURL] = temp;
   res.redirect(`/urls/${shortURL}`);
   return;
@@ -173,104 +169,94 @@ app.post("/urls", (req, res) => {
 
 //Setting cookies name and passing it to /urls then redirecting to /urls
 app.post('/login', (req, res) => {
-  const email = req.body.email
-  const password = req.body.password
-
+  const email = req.body.email;
+  const password = req.body.password;
   for (const userId in users) {
     if (users[userId].email === email) {
-
-   const result = bcrypt.compareSync(password, users[userId].hashedPassword) 
-        if (result) {
-          res.cookie('user_id', userId)
-          res.redirect('/urls')
-          return
-        } 
+      const result = bcrypt.compareSync(password, users[userId].hashedPassword);
+      if (result) {
+        req.session.userid = "userid";
+        res.redirect('/urls');
+        return;
+      }
     }
   }
-  res.status(403)
-  res.send("there is an error with your sign-in credentials")
-})
+  res.status(403);
+  res.send("there is an error with your sign-in credentials");
+});
 
 //Clearing cookies and redirecting back to /urls
 app.post('/logout', (req, res) => {
-  res.clearCookie("user_id")
-  res.redirect("/urls")
-})
+  req.session = null;
+  res.redirect("/login");
+});
 
 //Register new user, and set cookie, if user exists send an error back
 app.post('/register', (req, res) => {
-  const id = generateRandomString()
-  const email = req.body.email
-  const password = req.body.password
+  const id = generateRandomString();
+  const email = req.body.email;
+  const password = req.body.password;
   const hashedPassword = bcrypt.hashSync(password, 10);
   const newUser = {
     id,
     email,
     hashedPassword
-  }
-
+  };
   if (!email || !password) {
-    res.status(400)
-    res.send("this thing dun did broke")
+    res.status(400);
+    res.send("this thing dun did broke");
   }
-
   for (const userId in users) {
-    console.log(users[userId]);
     if (users[userId].email === email) {
-      res.status(400)
-      return res.send("there is a problem, that email already exists")
+      res.status(400);
+      return res.send("there is a problem, that email already exists");
     }
   }
-
-  users[id] = newUser
-
-  res.cookie('user_id', id)
-  return res.redirect('/urls')
-
-})
+  users[id] = newUser;
+  req.session.userid = id;
+  return res.redirect('/urls');
+});
 
 //Setting longURL to the proper shortURL then back to /urls
 app.post('/urls/:shortURL/edit', (req, res) => {
-  // first retirieve this particular shortURL then check if
-  //now compare current user with userID tags in full object 
+  let shortURL = req.params.shortURL;
+  const fullObject = urlDatabase[shortURL];
 
-
-  let shortURL = req.params.shortURL
-  const fullObject = urlDatabase[shortURL]
   if (!fullObject) {
-    res.status(301)
-    res.send("this url doesn't exist, fix this later")
-    return
+    res.status(301);
+    res.send("this url doesn't exist, fix this later");
+    return;
   }
-  if (req.cookies["user_id"] === fullObject.userID) {
 
-    urlDatabase[shortURL] = req.body.longURL
-    res.redirect('/urls')
-    return
+  if (req.session.userid === fullObject.userID) {
+    urlDatabase[shortURL] = req.body.longURL;
+    res.redirect('/urls');
+    return;
   }
-  res.send("you don't have access to this url")
 
-})
+  res.send("you don't have access to this url");
+
+});
 
 //Removing a short/long URL from the database then back to /urls
 app.post('/urls/:shortURL/delete', (req, res) => {
+  let shortURL = req.params.shortURL;
+  const fullObject = urlDatabase[shortURL];
 
-  let shortURL = req.params.shortURL
-  const fullObject = urlDatabase[shortURL]
   if (!fullObject) {
-    res.status(301)
-    res.send("this url doesn't exist, fix this later")
-    return
+    res.status(301);
+    res.send("this url doesn't exist, please go back");
+    return;
   }
-  if (req.cookies["user_id"] === fullObject.userID) {
+  if (req.session.userid === fullObject.userID) {
 
-    delete urlDatabase[req.params.shortURL]
-    res.redirect('/urls')
-    return
+    delete urlDatabase[req.params.shortURL];
+    res.redirect('/urls');
+    return;
   }
-  res.send("you don't have access to this url")
+  res.send("you don't have access to this url");
 
-})
+});
 
 
 
@@ -279,16 +265,3 @@ app.post('/urls/:shortURL/delete', (req, res) => {
 app.listen(PORT, () => {
   console.log(`Yo, your port is "${PORT}" and it's 🔥🔥🔥!`);
 });
-
-
-
-// const foundUser = function() {
-//   let user = req.cookies["user_id"]
-//   let foundUser;
-//   for (const userId in users) {
-//     if (user.email === email) {
-//       return true
-//       foundUser = users[userId];
-//     }
-//   }
-// }
