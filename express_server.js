@@ -68,13 +68,13 @@ app.get("/urls", (req, res) => {
       urls: urlList,
       // urlDatabase
     };
-console.log("this is templafl", templateVars);
+;
     res.render("urls_index", templateVars);
     return;
   }
 
   res.redirect("/login");
-  return
+  return;
 });
 
 //Sending templateVars to urls_new
@@ -116,11 +116,11 @@ app.get('/login', (req, res) => {
   
   let templateVars = {
     urls: urlDatabase,
-    user: ""
+    user: "" || req.session.userid
   };
 
   res.render('user_login', templateVars);
-  return
+  return;
 });
 
 //Error if longURL isn't valid or shortURL doesn't exist otherwise takes them to their longURL
@@ -228,20 +228,20 @@ app.post('/register', (req, res) => {
 
 //Setting longURL to the proper shortURL then back to /urls
 app.post('/urls/:shortURL/edit', (req, res) => {
-  // console.log(urlDatabase);
   let shortURL = req.params.shortURL;
   const fullObject = urlDatabase[shortURL];
-// console.log(fullObject);
+
   if (!fullObject) {
     res.status(301).send("this url doesn't exist, fix this later");
     return;
   }
 
   if (req.session.userid === fullObject.userID) {
-    let longURL = req.body.longURL
-    let userID = fullObject.userID
+    let longURL = req.body.longURL;
+    let userID = fullObject.userID;
+
     urlDatabase[shortURL] = { longURL, userID };
-    console.log("post edit", urlDatabase);
+
     res.redirect('/urls');
     return;
   }

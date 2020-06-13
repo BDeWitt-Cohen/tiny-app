@@ -1,10 +1,10 @@
 {
   "name": "tiny-app",
   "version": "1.0.0",
-  "description": "",
+  "description": "Web app to shorten URLs and store and share them",
   "main": "index.js",
   "scripts": {
-    "test":   "./node_modules/mocha/bin/mocha",
+    "test": "./node_modules/mocha/bin/mocha",
     "start": "./node_modules/.bin/nodemon -L express_server.js"
   },
   "repository": {
@@ -12,7 +12,7 @@
     "url": "git+https://github.com/BDeWitt-Cohen/tiny-app.git"
   },
   "keywords": [],
-  "author": "",
+  "author": "Trevor Thomas",
   "license": "ISC",
   "bugs": {
     "url": "https://github.com/BDeWitt-Cohen/tiny-app/issues"
