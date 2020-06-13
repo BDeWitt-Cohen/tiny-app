@@ -59,6 +59,7 @@ app.get("/", (req, res) => {
 //Renders the index page and moves templateVars over to index page
 app.get("/urls", (req, res) => {
   const justID = req.session.userid;
+  
 
   if (req.session.userid) {
     const urlList = urlsForUser(urlDatabase, justID);
@@ -68,13 +69,14 @@ app.get("/urls", (req, res) => {
       urls: urlList,
       // urlDatabase
     };
-;
     res.render("urls_index", templateVars);
-    return;
+  } else{
+    res.redirect("/login");
   }
 
-  res.redirect("/login");
-  return;
+
+  
+  
 });
 
 //Sending templateVars to urls_new
@@ -111,16 +113,17 @@ app.get('/register', (req, res) => {
 //Renders login page, if already logged in redirects to /urls
 app.get('/login', (req, res) => {
   if (req.session.userid) {
+    
     res.redirect('/urls');
-  }
-  
-  let templateVars = {
-    urls: urlDatabase,
-    user: "" || req.session.userid
-  };
+  } else{
 
-  res.render('user_login', templateVars);
-  return;
+    let templateVars = {
+      urls: urlDatabase,
+      user:  ""
+    };
+
+    res.render('user_login', templateVars);
+  }
 });
 
 //Error if longURL isn't valid or shortURL doesn't exist otherwise takes them to their longURL
@@ -165,7 +168,6 @@ app.post("/urls", (req, res) => {
   urlDatabase[shortURL] = temp;
 
   res.redirect(`/urls/${shortURL}`);
-  return;
 });
 
 //Setting cookies name and passing it to /urls then redirecting to /urls
@@ -179,9 +181,9 @@ app.post('/login', (req, res) => {
       const result = bcrypt.compareSync(password, users[userId].hashedPassword);
 
       if (result) {
-        req.session.userid = "userid";
+
+        req.session.userid = userId;
         res.redirect('/urls');
-        return;
       }
     }
   }
