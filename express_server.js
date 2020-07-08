@@ -130,27 +130,31 @@ app.get('/login', (req, res) => {
 app.get("/u/:shortURL", (req, res) => {
   let newShort = req.params.shortURL;
 
-  for (const urls in urlDatabase) {
-    if (urls !== newShort) {
-      res.send('Sorry, that shortURL doesn\'t exits!');
+
+    if (!urlDatabase[newShort]) {
+      return res.send('Sorry, that shortURL doesn\'t exits!');
     }
-  }
+
 
   const longURL = urlDatabase[req.params.shortURL].longURL;
   if (longURL === undefined) {
-    res.send("The webpage your originally converted doesn't exist. Maybe try to google it or something...");
-
+    return res.send("The webpage your originally converted doesn't exist. Maybe try to google it or something..."); 
   }
 
-  res.redirect(longURL);
-  return;
+  return res.redirect(longURL);
+  
 });
 
 //Goes to the show page where they can edit or use their link
 app.get("/urls/:shortURL", (req, res) => {
+  const url = urlDatabase[req.params.shortURL]
+  if (req.session.userid !== url.userID){
+    return res.send("You need permissions to view this URL")
+  }
+  
   let templateVars = {
     shortURL: req.params.shortURL,
-    longURL: urlDatabase[req.params.shortURL].longURL,
+    longURL: url.longURL,
     user: users[req.session.userid]
   };
 
@@ -166,7 +170,8 @@ app.post("/urls", (req, res) => {
   let shortURL = generateRandomString();
   let temp = { longURL: req.body.longURL, userID: req.session.userid };
   urlDatabase[shortURL] = temp;
-
+  console.log(temp);
+  console.log(shortURL);
   res.redirect(`/urls/${shortURL}`);
 });
 
